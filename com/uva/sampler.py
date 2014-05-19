@@ -381,11 +381,11 @@ class Sampler(object):
                 non_link_likelihood += edge_likelihood
         
         # weight each part proportionally. 
-        avg_likelihood = self.link_ratio*(link_likelihood/link_count) + \
-                            (1-self.link_ratio)*(non_link_likelihood/non_link_count) 
+        #avg_likelihood = self.link_ratio*(link_likelihood/link_count) + \
+        #                    (1-self.link_ratio)*(non_link_likelihood/non_link_count) 
         
         # direct calculation. 
-        #avg_likelihood = (link_likelihood + non_link_likelihood)/(link_count+non_link_count)
+        avg_likelihood = (link_likelihood + non_link_likelihood)/(link_count+non_link_count)
         #print "perplexity score is: " + str(math.exp(-avg_likelihood))    
         
         return math.exp(-avg_likelihood)            
