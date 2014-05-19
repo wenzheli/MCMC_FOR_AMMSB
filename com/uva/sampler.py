@@ -61,7 +61,7 @@ class Sampler(object):
         # restrict this is using re-reparameterization techniques, where we 
         # introduce another set of variables, and update them first followed by 
         # updating \pi and \beta.  
-        self.theta = np.random.gamma(1,1,(self.K, 2))      # parameterization for \beta
+        self.theta = np.random.gamma(1,6,(self.K, 2))      # parameterization for \beta
         self.phi = np.random.gamma(1,1,(self.N, self.K))   # parameterization for \pi
         temp = self.theta/np.sum(self.theta,1)[:,np.newaxis]
         self.beta = temp[:,1]
@@ -77,7 +77,7 @@ class Sampler(object):
         
         # control parameters for learning
         self.num_node_sample = int(math.sqrt(network.num_nodes)) 
-        self.step_count = 0
+        self.step_count = 1
         self.hold_out_prob = args.hold_out_prob  # percentage of samples used for validation, testing
         if args.mini_batch_size < 1:
             # use default option. 
@@ -229,7 +229,7 @@ class Sampler(object):
             for i in range(0,2):
                 theta_star[k,i] = abs(self.theta[k,i] + eps_t/2 * (self.eta - self.theta[k,i] + \
                                     num_total_pairs/len(mini_batch) * grads[k,i]) + eps_t**.5*self.theta[k,i] ** .5 * noise[k,i])  
-        self.theta = theta_star
+        self.theta = theta_star * 1.0/self.step_count + (1-1.0/self.step_count)*self.theta
                 
         # update beta from theta
         temp = self.theta/np.sum(self.theta,1)[:,np.newaxis]
@@ -254,7 +254,8 @@ class Sampler(object):
         for k in range(0, self.K):
             phi_star[k] = abs(self.phi[i,k] + eps_t/2 * (self.alpha - self.phi[i,k] + \
                                 self.N/n * grads[k]) + eps_t**.5*self.phi[i,k]**.5 * noise[k])
-        self.phi[i] = phi_star
+        
+        self.phi[i] = phi_star * (1.0/self.step_count) + (1-1.0/self.step_count)*self.phi[i]
         
         # update pi
         sum_phi = np.sum(self.phi[i])
@@ -384,8 +385,8 @@ class Sampler(object):
                             (1-self.link_ratio)*(non_link_likelihood/non_link_count) 
         
         # direct calculation. 
-        # avg_likelihood = (link_likelihood + non_link_likelihood)/(link_count+non_link_count)
-        print "perplexity score is: " + str(math.exp(-avg_likelihood))    
+        #avg_likelihood = (link_likelihood + non_link_likelihood)/(link_count+non_link_count)
+        #print "perplexity score is: " + str(math.exp(-avg_likelihood))    
         
         return math.exp(-avg_likelihood)            
     
