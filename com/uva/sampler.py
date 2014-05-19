@@ -61,7 +61,7 @@ class Sampler(object):
         # restrict this is using re-reparameterization techniques, where we 
         # introduce another set of variables, and update them first followed by 
         # updating \pi and \beta.  
-        self.theta = np.random.gamma(1,6,(self.K, 2))      # parameterization for \beta
+        self.theta = np.random.gamma(1,1,(self.K, 2))      # parameterization for \beta
         self.phi = np.random.gamma(1,1,(self.N, self.K))   # parameterization for \pi
         temp = self.theta/np.sum(self.theta,1)[:,np.newaxis]
         self.beta = temp[:,1]
