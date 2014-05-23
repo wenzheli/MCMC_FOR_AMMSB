@@ -311,7 +311,7 @@ class SVI(object):
                 non_link_count += 1
                 non_link_likelihood += edge_likelihood
         
-        # weight each part proportionally. 
+    v    # weight each part proportionally. 
         avg_likelihood = self.link_ratio*(link_likelihood/link_count) + \
                             (1-self.link_ratio)*(non_link_likelihood/non_link_count) 
         
