@@ -98,7 +98,7 @@ class Network(object):
         elif strategy == "stratified-random-pair":
             return self.__stratified_random_pair_sampling(mini_batch_size)
         elif strategy == "stratified-random-node":
-            return self.__stratified_random_node_sampling()
+            return self.__stratified_random_node_sampling(10)
         else:
             print "Invalid sampling strategy, please make sure you are using the correct one:\
                 [random-pair, random-node, stratified-random-pair, stratified-random-node]"

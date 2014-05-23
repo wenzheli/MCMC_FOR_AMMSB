@@ -26,7 +26,7 @@ def main():
     
     data = DataFactory.get_data("netscience")
     network = Network(data, 0.1)
-    sampler  = SVI(args, network)
+    sampler  = MCMCSamplerStochastic(args, network)
     sampler.run()
     
 
