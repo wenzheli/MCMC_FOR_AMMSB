@@ -83,6 +83,13 @@ class SVI(Learner):
         # running until convergence. 
         while self._step_count < self._max_iteration and not self._is_converged():       
             
+            # evaluate model after processing every 10 mini-batches. 
+            if self._step_count % 1 == 0:
+                self.__update_pi_beta()
+                ppx_score = self._cal_perplexity_held_out()
+                print "perplexity for hold out set is: "  + str(ppx_score)
+                self._ppxs_held_out.append(ppx_score)
+            
             #pr = cProfile.Profile()
             #pr.enable()
             
@@ -93,12 +100,6 @@ class SVI(Learner):
                 self.__estimate_phi_for_edge(edge, phi)  # this can be done in parallel. 
             self.__update_gamma_and_lamda(phi, mini_batch, scale)
             
-            # evaluate model after processing every 10 mini-batches. 
-            if self._step_count % 1 == 0:
-                self.__update_pi_beta()
-                ppx_score = self._cal_perplexity_held_out()
-                print "perplexity for hold out set is: "  + str(ppx_score)
-                self._ppxs_held_out.append(ppx_score)
             self._step_count += 1
             
             #pr.disable()

@@ -114,7 +114,7 @@ class Learner(object):
         
         # weight each part proportionally. 
         #avg_likelihood = self._link_ratio*(link_likelihood/link_count) + \
-          #                  (1-self._link_ratio)*(non_link_likelihood/non_link_count) 
+         #                   (1-self._link_ratio)*(non_link_likelihood/non_link_count) 
         
         # direct calculation. 
         avg_likelihood = (link_likelihood + non_link_likelihood)/(link_count+non_link_count)

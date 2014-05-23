@@ -12,7 +12,7 @@ def main():
     parser.add_argument('K', type=int, default=100)  
     parser.add_argument('mini_batch_size', type=int, default=500)   # mini-batch size
     parser.add_argument('epsilon', type=float, default=0.05)
-    parser.add_argument('max_iteration', type=int, default=1000)
+    parser.add_argument('max_iteration', type=int, default=100000)
     
     # parameters for step size
     parser.add_argument('a', type=float, default=0.01)
@@ -24,10 +24,10 @@ def main():
     parser.add_argument('output_dir', type=str,default='.')
     args = parser.parse_args()
     
-    data = DataFactory.get_data("relativity")
+    data = DataFactory.get_data("netscience")
     network = Network(data, 0.1)
-    sampler  = SVI(args, network)
-    sampler.run()
+    sampler  = MCMCSamplerStochastic(args, network)
+    sampler.run1()
     
 
 if __name__ == '__main__':
