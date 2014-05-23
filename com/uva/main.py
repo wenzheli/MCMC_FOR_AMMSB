@@ -16,7 +16,7 @@ def main():
     
     # parameters for step size
     parser.add_argument('a', type=float, default=0.01)
-    parser.add_argument('b', type=float, default=1000)
+    parser.add_argument('b', type=float, default=1024)
     parser.add_argument('c', type=float, default=0.55)
     
     parser.add_argument('num_updates', type=int, default=1000)
@@ -24,9 +24,9 @@ def main():
     parser.add_argument('output_dir', type=str,default='.')
     args = parser.parse_args()
     
-    data = DataFactory.get_data("netscience")
+    data = DataFactory.get_data("relativity")
     network = Network(data, 0.1)
-    sampler  = MCMCSamplerStochastic(args, network)
+    sampler  = SVI(args, network)
     sampler.run()
     
 

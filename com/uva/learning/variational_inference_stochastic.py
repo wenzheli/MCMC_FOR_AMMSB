@@ -59,9 +59,8 @@ class SVI(Learner):
         self.__gamma = np.random.gamma(1,1,(self._N, self._K)) # variational parameters for pi
         
         # step size parameters. 
-        self.__a = args.a
-        self.__b = args.b
-        self.__c = args.c
+        self.__kappa = args.b
+        self.__tao = args.c
         
         # control parameters for learning 
         self.__online_iterations = 50
@@ -87,12 +86,12 @@ class SVI(Learner):
             #pr = cProfile.Profile()
             #pr.enable()
             
-            (mini_batch, scale) = self._network.sample_mini_batch(self._mini_batch_size, "random-pair")
+            (mini_batch, scale) = self._network.sample_mini_batch(self._mini_batch_size, "stratified-random-node")
             # update (phi_ab, phi_ba) for each edge
             phi = {}               # mapping (a,b) => (phi_ab, phi_ba)
             for edge in mini_batch:
                 self.__estimate_phi_for_edge(edge, phi)  # this can be done in parallel. 
-            self.__update_gamma_and_lamda(phi, mini_batch)
+            self.__update_gamma_and_lamda(phi, mini_batch, scale)
             
             # evaluate model after processing every 10 mini-batches. 
             if self._step_count % 1 == 0:
@@ -120,7 +119,7 @@ class SVI(Learner):
         for k in range(self._K):
             self._beta[k] = self.__lamda[k][0]/(self.__lamda[k][0]+self.__lamda[k][1])        
             
-    def __update_gamma_and_lamda(self, phi, mini_batch):
+    def __update_gamma_and_lamda(self, phi, mini_batch, scale):
         # calculate the gradient for gamma
         grad_lamda = np.zeros((self._K, 2))
         grad_gamma = {}   # ie. grad[a] = array[] which is K dimensional vector
@@ -146,10 +145,11 @@ class SVI(Learner):
             else:
                 grad_gamma[b] = phi_ba
                 counter[b] = 1
-                
-            '''
-            calculate the gradient for lamda
-            '''
+        
+        for edge in mini_batch:    
+            """
+            calculate the gradient for lambda
+            """
             y = 0
             if edge in self._network.get_linked_edges():
                 y = 1
@@ -161,21 +161,32 @@ class SVI(Learner):
         # update gamma, only update node in the grad
         p_t = (1024 + self._step_count)**(-0.5)
         for node in grad_gamma.keys():
-            scale = self._N/counter[node]*1.0
-            self.__gamma[node] = (1-p_t)*self.__gamma[node] + p_t * (self._alpha + scale * grad_gamma[node])
+            scale1 = self._N/counter[node]*1.0
+            self.__gamma[node] = (1-p_t)*self.__gamma[node] + p_t * (self._alpha + scale1 * grad_gamma[node])
             
         # update lamda
-        size = len(mini_batch)
-        scale = (self._N * self._N/2)/size*1.0
         for k in range(self._K):
             self.__lamda[k][0] = (1-p_t)*self.__lamda[k][0] + p_t *(self._eta[0] + scale * grad_lamda[k][0])
-            self.__lamda[k][1] = (1-p_t)*self.__lamda[k][1] + p_t *(self._eta[1] + scale * grad_lamda[k][0])
+            self.__lamda[k][1] = (1-p_t)*self.__lamda[k][1] + p_t *(self._eta[1] + scale * grad_lamda[k][1])
             
         
     def __estimate_phi_for_edge(self, edge, phi):
         '''
-        calculate (phi_ab, phi_ba) for given edge : (a,b)
+        calculate (phi_ab, phi_ba) for given edge : (a,b) 
+        (a) calculate phi_ab given phi_ba
+            if y =0:
+        phi_ab[k]=exp(psi(gamma[a][k])+phi_ba[k]*(psi(lamda[k][1])-psi(lambda[k0]+lambda[k][1]))-phi_ba[k]*log(1-epsilon))
+            if y=1:
+        phi_ab[k]=exp(psi(gamma[a][k])+phi_ba[k]*(psi(lamda[k][0])-psi(lambda[k0]+lambda[k][1]))-phi_ba[k]*log(epsilon))
+        
+        (b) calculate phi_ba given phi_ab
+            if y =0:
+        phi_ba[k]=exp(psi(gamma[b][k])+phi_ab[k]*(psi(lamda[k][1])-psi(lambda[k0]+lambda[k][1]))-phi_ab[k]*log(1-epsilon))
+            if y=1:
+        phi_ba[k]=exp(psi(gamma[b][k])+phi_ab[k]*(psi(lamda[k][0])-psi(lambda[k0]+lambda[k][1]))-phi_ab[k]*log(epsilon))
+        
         '''
+        
         a = edge[0]
         b = edge[1]
         # initialize 
@@ -197,24 +208,26 @@ class SVI(Learner):
             # first, update phi_ab
             for k in range(self._K):
                 if y == 1:
-                    u = (1-phi_ba[k])* math.log(self._epsilon)
+                    u = -phi_ba[k]* math.log(self._epsilon)
                     phi_ab[k] = math.exp(psi(self.__gamma[a][k])+phi_ba[k]*\
-                                         (psi(self.__lamda[k][0])-psi(self.__lamda[k][0]+psi(self.__lamda[k][1])))+u)
+                                         (psi(self.__lamda[k][0])-psi(self.__lamda[k][0]+self.__lamda[k][1]))+u)
                 else:
+                    u = -phi_ba[k]* math.log(1-self._epsilon)
                     phi_ab[k] = math.exp(psi(self.__gamma[a][k])+phi_ba[k]*\
-                                         (psi(self.__lamda[k][1])-psi(self.__lamda[k][0]+self.__lamda[k][1])))    
+                                         (psi(self.__lamda[k][1])-psi(self.__lamda[k][0]+self.__lamda[k][1]))+u)    
             sum_phi_ab = np.sum(phi_ab)
             phi_ab = phi_ab/sum_phi_ab
                 
             # then update phi_ba
             for k in range(self._K):
                 if y == 1:
-                    u = (1-phi_ab[k])* math.log(self._epsilon) 
+                    u = -phi_ab[k]* math.log(self._epsilon)
                     phi_ba[k] = math.exp(psi(self.__gamma[b][k])+phi_ab[k]*\
-                                         (psi(self.__lamda[k][0])-psi(self.__lamda[k][0]+psi(self.__lamda[k][1])))+u)
+                                         (psi(self.__lamda[k][0])-psi(self.__lamda[k][0]+self.__lamda[k][1]))+u)
                 else:
+                    u = -phi_ab[k]* math.log(1-self._epsilon)
                     phi_ba[k] = math.exp(psi(self.__gamma[b][k])+phi_ab[k]*\
-                                         (psi(self.__lamda[k][1])-psi(self.__lamda[k][0]+self.__lamda[k][1])))   
+                                         (psi(self.__lamda[k][1])-psi(self.__lamda[k][0]+self.__lamda[k][1]))+u)   
                
             sum_phi_ba = np.sum(phi_ba)
             phi_ba = phi_ba/sum_phi_ba

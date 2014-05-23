@@ -63,7 +63,7 @@ class MCMCSamplerStochastic(Learner):
     def run(self):
         """ run mini-batch based MCMC sampler """
         while self._step_count < self._max_iteration and not self._is_converged():
-            (mini_batch, scale) = self._network.sample_mini_batch(self._mini_batch_size, "random-pair")
+            (mini_batch, scale) = self._network.sample_mini_batch(self._mini_batch_size, "stratified-random-node")
             latent_vars = {}
             size = {}
             # iterate through each node in the mini batch. 
@@ -79,7 +79,7 @@ class MCMCSamplerStochastic(Learner):
                 self.__update_pi_for_node(node, latent_vars[node], size[node])
             
             # update \theta and \beta 
-            self.__update_beta(mini_batch)    
+            self.__update_beta(mini_batch, scale)    
       
             if self._step_count % 1 == 0:
                 ppx_score = self._cal_perplexity_held_out()
@@ -89,7 +89,7 @@ class MCMCSamplerStochastic(Learner):
             self._step_count += 1
     
     
-    def __update_beta(self, mini_batch):
+    def __update_beta(self, mini_batch, scale):
         '''
         update beta for mini_batch. 
         '''
@@ -121,7 +121,7 @@ class MCMCSamplerStochastic(Learner):
         for k in range(0,self._K):
             for i in range(0,2):
                 theta_star[k,i] = abs(self.__theta[k,i] + eps_t/2 * (self._eta[i] - self.__theta[k,i] + \
-                                    num_total_pairs/len(mini_batch) * grads[k,i]) + eps_t**.5*self.__theta[k,i] ** .5 * noise[k,i])  
+                                    scale * grads[k,i]) + eps_t**.5*self.__theta[k,i] ** .5 * noise[k,i])  
         self.__theta = theta_star * 1.0/self._step_count + (1-1.0/self._step_count)*self.__theta
                 
         # update beta from theta
