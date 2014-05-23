@@ -87,7 +87,7 @@ class SVI(Learner):
             if self._step_count % 1 == 0:
                 self.__update_pi_beta()
                 ppx_score = self._cal_perplexity_held_out()
-                print "perplexity for hold out set is: "  + str(ppx_score)
+                #print "perplexity for hold out set is: "  + str(ppx_score)
                 self._ppxs_held_out.append(ppx_score)
             
             #pr = cProfile.Profile()
