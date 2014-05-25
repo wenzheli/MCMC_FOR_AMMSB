@@ -6,18 +6,35 @@ from com.uva.learning.variational_inference_stochastic import SVI
 import threading
 import matplotlib.pyplot as plt
 
-def work (sampler): 
-  threading.Timer(5, work, [sampler]).start (); 
-  print "held out perplexity: " + str(sampler._cal_perplexity_held_out())
+def work_mcmc (sampler, ppxs): 
+    threading.Timer(1, work_mcmc, [sampler, ppxs]).start (); 
+    ppx = sampler._cal_perplexity_held_out()
+    print "MCMC perplexity: " + str(ppx)
+    ppxs.append(ppx)
+    if len(ppxs) % 100 == 0:
+        f = open('result_mcmc.txt', 'wb')
+        for i in range(len(ppxs)):
+            f.write(str(ppxs[i]) + "\n")
+        f.close()
 
-
+def work_svi (sampler, ppxs): 
+    threading.Timer(3, work_svi, [sampler, ppxs]).start (); 
+    ppx = sampler._cal_perplexity_held_out()
+    print "SVI perplexity: " + str(ppx)
+    ppxs.append(ppx)
+    if len(ppxs) % 100 == 0:
+        f = open('result_svi.txt', 'wb')
+        for i in range(len(ppxs)):
+            f.write(str(ppxs[i]) + "\n")
+        f.close()
+    
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('alpha', type=float, default=0.01)
     parser.add_argument('eta0', type=float, default=1)
     parser.add_argument('eta1', type=float, default=1)
     parser.add_argument('K', type=int, default=100)  
-    parser.add_argument('mini_batch_size', type=int, default=500)   # mini-batch size
+    parser.add_argument('mini_batch_size', type=int, default=50)   # mini-batch size
     parser.add_argument('epsilon', type=float, default=0.05)
     parser.add_argument('max_iteration', type=int, default=10000000)
     
@@ -31,13 +48,23 @@ def main():
     parser.add_argument('output_dir', type=str,default='.')
     args = parser.parse_args()
     
-    data = DataFactory.get_data("netscience")
+    data = DataFactory.get_data("relativity")
     network = Network(data, 0.1)
-    sampler  = MCMCSamplerStochastic(args, network)
-    work(sampler)
+    
+    
+    ppx_mcmc = []
+    sampler = MCMCSamplerStochastic(args, network)
+    work_mcmc(sampler, ppx_mcmc)
     sampler.run1()
+    
+    ppx_svi = []
+    sampler  = SVI(args, network)
+    work_svi(sampler, ppx_svi)
+    sampler.run()
+    
+    
 
-
+        
 
 if __name__ == '__main__':
     main()

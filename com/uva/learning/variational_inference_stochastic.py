@@ -7,7 +7,7 @@ from sets import Set
 import cProfile, pstats, StringIO
 from scipy.special import psi
 from com.uva.learning.learner import Learner
-
+from com.uva.estimate_phi import sample_latent_vars_for_each_pair
 
 class SVI(Learner):
     '''
@@ -57,7 +57,7 @@ class SVI(Learner):
         # variational parameters. 
         self.__lamda = np.random.gamma(1,1,(self._K, 2))      # variational parameters for beta  
         self.__gamma = np.random.gamma(1,1,(self._N, self._K)) # variational parameters for pi
-        
+        self.__update_pi_beta()
         # step size parameters. 
         self.__kappa = args.b
         self.__tao = args.c
@@ -81,44 +81,65 @@ class SVI(Learner):
                 new_value = (1-p_t)*old_value + p_t * new value. 
         '''
         # running until convergence. 
-        while self._step_count < self._max_iteration and not self._is_converged():       
-            
-            # evaluate model after processing every 10 mini-batches. 
-            if self._step_count % 1 == 0:
-                self.__update_pi_beta()
-                ppx_score = self._cal_perplexity_held_out()
-                #print "perplexity for hold out set is: "  + str(ppx_score)
-                self._ppxs_held_out.append(ppx_score)
-            
-            #pr = cProfile.Profile()
-            #pr.enable()
+        while self._step_count < self._max_iteration and not self._is_converged(): 
+            #print "step count " + str(self._step_count)      
+            """
+            pr = cProfile.Profile()
+            pr.enable()
+            """
             
             (mini_batch, scale) = self._network.sample_mini_batch(self._mini_batch_size, "stratified-random-node")
+            
+             # evaluate model after processing every 10 mini-batches. 
+            """
+            if self._step_count % 1 == 0:
+                ppx_score = self._cal_perplexity_held_out()
+                print "perplexity for hold out set is: "  + str(ppx_score)
+                self._ppxs_held_out.append(ppx_score)
+            """
             # update (phi_ab, phi_ba) for each edge
             phi = {}               # mapping (a,b) => (phi_ab, phi_ba)
-            for edge in mini_batch:
-                self.__estimate_phi_for_edge(edge, phi)  # this can be done in parallel. 
+            self.__sample_latent_vars_for_edges(phi, mini_batch)
             self.__update_gamma_and_lamda(phi, mini_batch, scale)
+            self.__update_pi_beta()
             
             self._step_count += 1
-            
-            #pr.disable()
-            #s = StringIO.StringIO()
-            #sortby = 'cumulative'
-            #ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
-            #ps.print_stats()
-            #print s.getvalue()
-            #self.step_count += 1
+            """
+            pr.disable()
+            s = StringIO.StringIO()
+            sortby = 'cumulative'
+            ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+            ps.print_stats()
+            print s.getvalue()
+            """
+    def __sample_latent_vars_for_edges(self, phi, mini_batch):
+        
+        for edge in mini_batch:
+            a = edge[0]
+            b = edge[1]
+            #self.__estimate_phi_for_edge(edge, phi)  # this can be done in parallel. 
+            (phi_ab, phi_ba) = sample_latent_vars_for_each_pair(a, b, self.__gamma[a], self.__gamma[b],
+                                                                self.__lamda, self._K, self.__phi_update_threshold,
+                                                                self._epsilon, 50, 
+                                                                self._network.get_linked_edges())
+            phi[(a,b)]=phi_ab
+            phi[(b,a)]=phi_ba
     
     def __update_pi_beta(self):
+        
+        self._pi = self.__gamma/np.sum(self.__gamma,1)[:,np.newaxis]
+        temp = self.__lamda/np.sum(self.__lamda,1)[:,np.newaxis]
+        self._beta = temp[:,1]
         # estimate the pi and beta
+        """
         for i in range(self._N):
             for k in range(self._K):
                 s = np.sum(self.__gamma[i])
                 self._pi[i][k] = self.__gamma[i][k]/s
         
         for k in range(self._K):
-            self._beta[k] = self.__lamda[k][0]/(self.__lamda[k][0]+self.__lamda[k][1])        
+            self._beta[k] = self.__lamda[k][1]/(self.__lamda[k][0]+self.__lamda[k][1])        
+        """ 
             
     def __update_gamma_and_lamda(self, phi, mini_batch, scale):
         # calculate the gradient for gamma

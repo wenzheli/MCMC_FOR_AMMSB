@@ -1,6 +1,6 @@
 from com.uva.preprocess.netscience import NetScience
 from com.uva.preprocess.relativity import Relativity
-
+from com.uva.preprocess.hep_ph import HepPH
 
 class DataFactory(object):
     """
@@ -17,6 +17,8 @@ class DataFactory(object):
             dataObj = NetScience()
         elif dataset_name == "relativity":
             dataObj  = Relativity()
+        elif dataset_name == "hep_ph":
+            dataObj = HepPH()
         else:
             pass
         

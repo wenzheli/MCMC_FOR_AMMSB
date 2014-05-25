@@ -43,7 +43,7 @@ class Learner(object):
         self._ppxs_test = []
         
         self._max_iteration = args.max_iteration
-        self.CONVERGENCE_THRESHOLD = 0.0000000001
+        self.CONVERGENCE_THRESHOLD = 0.000000000001
     @abc.abstractmethod
     def run(self):
         """
@@ -114,7 +114,7 @@ class Learner(object):
         
         # weight each part proportionally. 
         #avg_likelihood = self._link_ratio*(link_likelihood/link_count) + \
-         #                   (1-self._link_ratio)*(non_link_likelihood/non_link_count) 
+        #                   (1-self._link_ratio)*(non_link_likelihood/non_link_count) 
         
         # direct calculation. 
         avg_likelihood = (link_likelihood + non_link_likelihood)/(link_count+non_link_count)
@@ -143,7 +143,8 @@ class Learner(object):
             prob += (1-s) * (1-self._epsilon)
         else:
             prob += (1-s) * self._epsilon
-            
-        return math.log(prob)
+        if prob < 0:
+            print "adsfadsfadsf"
+        return math.log(prob)/math.log(2)
     
     
