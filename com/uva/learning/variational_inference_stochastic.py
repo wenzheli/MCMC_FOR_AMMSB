@@ -55,7 +55,7 @@ class SVI(Learner):
         Learner.__init__(self, args, graph)
         
         # variational parameters. 
-        self.__lamda = np.random.gamma(1,1,(self._K, 2))      # variational parameters for beta  
+        self.__lamda = np.random.gamma(self._eta[0],self._eta[1],(self._K, 2))      # variational parameters for beta  
         self.__gamma = np.random.gamma(1,1,(self._N, self._K)) # variational parameters for pi
         self.__update_pi_beta()
         # step size parameters. 
@@ -64,7 +64,7 @@ class SVI(Learner):
         
         # control parameters for learning 
         self.__online_iterations = 50
-        self.__phi_update_threshold = 0.01
+        self.__phi_update_threshold = 0.0001
        
     def run(self):
         '''
@@ -80,9 +80,10 @@ class SVI(Learner):
             update (gamma, lamda) using gradient:
                 new_value = (1-p_t)*old_value + p_t * new value. 
         '''
-        # running until convergence. 
+        # running until convergence.
+        self._step_count += 1 
         while self._step_count < self._max_iteration and not self._is_converged(): 
-            #print "step count " + str(self._step_count)      
+            print "step count " + str(self._step_count)      
             """
             pr = cProfile.Profile()
             pr.enable()
@@ -91,12 +92,12 @@ class SVI(Learner):
             (mini_batch, scale) = self._network.sample_mini_batch(self._mini_batch_size, "stratified-random-node")
             
              # evaluate model after processing every 10 mini-batches. 
-            """
+            
             if self._step_count % 1 == 0:
                 ppx_score = self._cal_perplexity_held_out()
                 print "perplexity for hold out set is: "  + str(ppx_score)
                 self._ppxs_held_out.append(ppx_score)
-            """
+            
             # update (phi_ab, phi_ba) for each edge
             phi = {}               # mapping (a,b) => (phi_ab, phi_ba)
             self.__sample_latent_vars_for_edges(phi, mini_batch)
@@ -118,12 +119,16 @@ class SVI(Learner):
             a = edge[0]
             b = edge[1]
             #self.__estimate_phi_for_edge(edge, phi)  # this can be done in parallel. 
+            
             (phi_ab, phi_ba) = sample_latent_vars_for_each_pair(a, b, self.__gamma[a], self.__gamma[b],
                                                                 self.__lamda, self._K, self.__phi_update_threshold,
-                                                                self._epsilon, 50, 
+                                                                self._epsilon, self.__online_iterations, 
                                                                 self._network.get_linked_edges())
             phi[(a,b)]=phi_ab
             phi[(b,a)]=phi_ba
+            
+            #self.__estimate_phi_for_edge(edge, phi)
+            
     
     def __update_pi_beta(self):
         
@@ -142,6 +147,8 @@ class SVI(Learner):
         """ 
             
     def __update_gamma_and_lamda(self, phi, mini_batch, scale):
+        
+        flag = 0
         # calculate the gradient for gamma
         grad_lamda = np.zeros((self._K, 2))
         grad_gamma = {}   # ie. grad[a] = array[] which is K dimensional vector
@@ -175,6 +182,7 @@ class SVI(Learner):
             y = 0
             if edge in self._network.get_linked_edges():
                 y = 1
+                flag = 1
             for k in range(self._K):
                 grad_lamda[k][0] += phi_ab[k] * phi_ba[k] * y 
                 grad_lamda[k][1] += phi_ab[k] * phi_ba[k] * (1-y) 
@@ -182,16 +190,31 @@ class SVI(Learner):
                 
         # update gamma, only update node in the grad
         p_t = (1024 + self._step_count)**(-0.5)
+        
         for node in grad_gamma.keys():
-            scale1 = self._N/counter[node]*1.0
-            self.__gamma[node] = (1-p_t)*self.__gamma[node] + p_t * (self._alpha + scale1 * grad_gamma[node])
+            gamma_star = np.zeros(self._K)
+            scale1 = 1.0
+            if flag == 0:
+                scale1 = self._N/counter[node]*1.0
             
+            if self._step_count > 400:
+                gamma_star = (1-p_t)*self.__gamma[node] + p_t * (self._alpha + scale1 * grad_gamma[node])
+                self.__gamma[node] = (1-1.0/(self._step_count))*self.__gamma[node] + 1.0/(self._step_count)*gamma_star
+            else:
+                self.__gamma[node]=(1-p_t)*self.__gamma[node] + p_t * (self._alpha + scale1 * grad_gamma[node])
+        
         # update lamda
         for k in range(self._K):
-            self.__lamda[k][0] = (1-p_t)*self.__lamda[k][0] + p_t *(self._eta[0] + scale * grad_lamda[k][0])
-            self.__lamda[k][1] = (1-p_t)*self.__lamda[k][1] + p_t *(self._eta[1] + scale * grad_lamda[k][1])
             
-        
+            if self._step_count > 400:
+                lamda_star_0 = (1-p_t)*self.__lamda[k][0] + p_t *(self._eta[0] + scale * grad_lamda[k][0])
+                lamda_star_1 = (1-p_t)*self.__lamda[k][1] + p_t *(self._eta[1] + scale * grad_lamda[k][1])
+                self.__lamda[k][0] = (1-1/(self._step_count)) * self.__lamda[k][0] +1/(self._step_count)*lamda_star_0
+                self.__lamda[k][1] = (1-1.0/(self._step_count)) * self.__lamda[k][1] +1.0/(self._step_count)*lamda_star_1
+            else:
+                self.__lamda[k][0] = (1-p_t)*self.__lamda[k][0] + p_t *(self._eta[0] + scale * grad_lamda[k][0])
+                self.__lamda[k][1] = (1-p_t)*self.__lamda[k][1] + p_t *(self._eta[1] + scale * grad_lamda[k][1])
+            
     def __estimate_phi_for_edge(self, edge, phi):
         '''
         calculate (phi_ab, phi_ba) for given edge : (a,b) 

@@ -145,6 +145,6 @@ class Learner(object):
             prob += (1-s) * self._epsilon
         if prob < 0:
             print "adsfadsfadsf"
-        return math.log(prob)/math.log(2)
+        return math.log(prob)
     
     
