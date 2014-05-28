@@ -7,7 +7,7 @@ import threading
 import matplotlib.pyplot as plt
 
 def work_mcmc (sampler, ppxs): 
-    threading.Timer(5, work_mcmc, [sampler, ppxs]).start (); 
+    threading.Timer(2, work_mcmc, [sampler, ppxs]).start (); 
     ppx = sampler._cal_perplexity_held_out()
     print "MCMC perplexity: " + str(ppx)
     ppxs.append(ppx)
@@ -18,7 +18,7 @@ def work_mcmc (sampler, ppxs):
         f.close()
 
 def work_svi (sampler, ppxs): 
-    threading.Timer(5, work_svi, [sampler, ppxs]).start (); 
+    threading.Timer(2, work_svi, [sampler, ppxs]).start (); 
     ppx = sampler._cal_perplexity_held_out()
     print "SVI perplexity: " + str(ppx)
     ppxs.append(ppx)
@@ -48,19 +48,20 @@ def main():
     parser.add_argument('output_dir', type=str,default='.')
     args = parser.parse_args()
     
-    data = DataFactory.get_data("relativity")
+    data = DataFactory.get_data("hep_ph")
     network = Network(data, 0.1)
     
+    """
     ppx_mcmc = []
     sampler = MCMCSamplerStochastic(args, network)
-    work_mcmc(sampler, ppx_mcmc)
+    #work_mcmc(sampler, ppx_mcmc)
     sampler.run()
-    
     """
+    
     ppx_svi = []
     sampler  = SVI(args, network)
-    work_svi(sampler, ppx_svi)
+    #work_svi(sampler, ppx_svi)
     sampler.run()
-    """
+    
 if __name__ == '__main__':
     main()

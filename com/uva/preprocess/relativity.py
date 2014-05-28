@@ -57,8 +57,7 @@ class Relativity(DataSet):
             node2 = node_id_map[strs[1]]
             if node1 == node2:
                 continue
-            if node1 == 2140 and node2 == 4368:
-                print "same"
+
             E.add((min(node1,node2), max(node1,node2)))
         
         return Data({}, E, N)

@@ -80,25 +80,24 @@ class SVI(Learner):
             update (gamma, lamda) using gradient:
                 new_value = (1-p_t)*old_value + p_t * new value. 
         '''
+        
+        pr = cProfile.Profile()
+        pr.enable()
+        
         # running until convergence.
-        self._step_count += 1 
-        while self._step_count < self._max_iteration and not self._is_converged(): 
-            print "step count " + str(self._step_count)      
-            """
-            pr = cProfile.Profile()
-            pr.enable()
-            """
+        self._step_count += 1      
             
+        while self._step_count < self._max_iteration and not self._is_converged(): 
             (mini_batch, scale) = self._network.sample_mini_batch(self._mini_batch_size, "stratified-random-node")
             
              # evaluate model after processing every 10 mini-batches. 
-            
-            """
-            if self._step_count % 1 == 0:
+            if self._step_count % 2 ==  1:
                 ppx_score = self._cal_perplexity_held_out()
                 print "perplexity for hold out set is: "  + str(ppx_score)
                 self._ppxs_held_out.append(ppx_score)
-            """
+                if ppx_score < 13.0:
+                    # we will use different step size schema
+                    self.stepsize_switch = True
             
             # update (phi_ab, phi_ba) for each edge
             phi = {}               # mapping (a,b) => (phi_ab, phi_ba)
@@ -107,14 +106,13 @@ class SVI(Learner):
             self.__update_pi_beta()
             
             self._step_count += 1
-            """
-            pr.disable()
-            s = StringIO.StringIO()
-            sortby = 'cumulative'
-            ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
-            ps.print_stats()
-            print s.getvalue()
-            """
+        
+        pr.disable()
+        s = StringIO.StringIO()
+        sortby = 'cumulative'
+        ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+        ps.print_stats()
+        print s.getvalue()    
     def __sample_latent_vars_for_edges(self, phi, mini_batch):
         
         for edge in mini_batch:
@@ -137,16 +135,7 @@ class SVI(Learner):
         self._pi = self.__gamma/np.sum(self.__gamma,1)[:,np.newaxis]
         temp = self.__lamda/np.sum(self.__lamda,1)[:,np.newaxis]
         self._beta = temp[:,1]
-        # estimate the pi and beta
-        """
-        for i in range(self._N):
-            for k in range(self._K):
-                s = np.sum(self.__gamma[i])
-                self._pi[i][k] = self.__gamma[i][k]/s
-        
-        for k in range(self._K):
-            self._beta[k] = self.__lamda[k][1]/(self.__lamda[k][0]+self.__lamda[k][1])        
-        """ 
+
             
     def __update_gamma_and_lamda(self, phi, mini_batch, scale):
         
@@ -191,8 +180,11 @@ class SVI(Learner):
                 
                 
         # update gamma, only update node in the grad
-        p_t = (1024 + self._step_count)**(-0.5)
-        
+        if self.stepsize_switch == False:
+            p_t = (1024 + self._step_count)**(-0.5)
+        else:
+            p_t = 0.01*(1+self._step_count/1024.0)**(-0.55)
+            
         for node in grad_gamma.keys():
             gamma_star = np.zeros(self._K)
             scale1 = 1.0

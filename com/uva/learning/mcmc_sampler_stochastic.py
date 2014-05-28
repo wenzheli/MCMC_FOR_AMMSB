@@ -97,6 +97,10 @@ class MCMCSamplerStochastic(Learner):
     def run(self):
         """ run mini-batch based MCMC sampler """
         while self._step_count < self._max_iteration and not self._is_converged():
+            #print "step: " + str(self._step_count)
+            
+            pr = cProfile.Profile()
+            pr.enable()
             (mini_batch, scale) = self._network.sample_mini_batch(self._mini_batch_size, "stratified-random-node")
             latent_vars = {}
             size = {}
@@ -118,13 +122,23 @@ class MCMCSamplerStochastic(Learner):
             z = self.__sample_latent_vars2(mini_batch)
             self.__update_beta(mini_batch, scale,z)    
             
-            """
-            if self._step_count % 1 == 0:
+            
+            if self._step_count % 2 == 1:
                 ppx_score = self._cal_perplexity_held_out()
-                print "perplexity for hold out set is: "  + str(ppx_score)
+                print str(ppx_score)
                 self._ppxs_held_out.append(ppx_score)
-            """        
+                if ppx_score < 12.0:
+                    self.stepsize_switch = True
+                    #print "switching to smaller step size mode!"
+                    
             self._step_count += 1
+            
+            pr.disable()
+            s = StringIO.StringIO()
+            sortby = 'cumulative'
+            ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+            ps.print_stats()
+            print s.getvalue()
     
     def __update_pi1(self, mini_batch):
         
@@ -149,8 +163,12 @@ class MCMCSamplerStochastic(Learner):
             grads[a][z_ab] += 1/self.__phi[a][z_ab]
             grads[b][z_ba] += 1/self.__phi[b][z_ba]
         
-        #eps_t  = self.__a*((1 + self._step_count/self.__b)**-self.__c)        # step size  
-        eps_t = (1024+self._step_count)**(-0.5)
+         # update gamma, only update node in the grad
+        if self.stepsize_switch == False:
+            eps_t = (1024+self._step_count)**(-0.5)
+        else:
+            eps_t  = self.__a*((1 + self._step_count/self.__b)**-self.__c)
+
         for i in range(0, self._N):
             if counter[i] < 1:
                 continue
@@ -178,8 +196,12 @@ class MCMCSamplerStochastic(Learner):
         '''
         update beta for mini_batch. 
         '''
-        #eps_t  = self.__a*((1 + self._step_count/self.__b)**-self.__c)     # step size 
-        eps_t = (1024+self._step_count)**(-0.5)
+        # update gamma, only update node in the grad
+        if self.stepsize_switch == False:
+            eps_t = (1024+self._step_count)**(-0.5)
+        else:
+            eps_t  = self.__a*((1 + self._step_count/self.__b)**-self.__c)
+            
         grads = np.zeros((self._K, 2))                               # gradients K*2 dimension
         sums = np.sum(self.__theta,1)                                 
         noise = np.random.randn(self._K, 2)                          # random noise. 
@@ -216,9 +238,13 @@ class MCMCSamplerStochastic(Learner):
     def __update_pi_for_node(self, i, z, n):
         '''
         update pi for current node i. 
-        '''                                                                                                                                                                                                                                                                                                                           
-        #eps_t  = self.__a*((1 + self._step_count/self.__b)**-self.__c)        # step size 
-        eps_t = (1024+self._step_count)**(-0.5)
+        ''' 
+        # update gamma, only update node in the grad
+        if self.stepsize_switch == False:
+            eps_t = (1024+self._step_count)**(-0.5)
+        else:
+            eps_t  = self.__a*((1 + self._step_count/self.__b)**-self.__c)                                                                                                                                                                                                                                                                                                                          
+    
         phi_star = copy.copy(self.__phi[i])                              # updated \phi
         phi_i_sum = np.sum(self.__phi[i])                                   
         noise = np.random.randn(self._K)                                 # random noise. 

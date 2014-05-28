@@ -10,7 +10,7 @@ class Learner(object):
     def __init__(self, args, network):
         """
         initialize base learner parameters.
-        """
+        """    
         self._network = network
         # model priors
         self._alpha = args.alpha
@@ -44,6 +44,10 @@ class Learner(object):
         
         self._max_iteration = args.max_iteration
         self.CONVERGENCE_THRESHOLD = 0.000000000001
+        
+        self.stepsize_switch = False
+        
+        
     @abc.abstractmethod
     def run(self):
         """
