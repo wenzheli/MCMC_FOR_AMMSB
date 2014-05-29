@@ -98,9 +98,10 @@ class MCMCSamplerStochastic(Learner):
         """ run mini-batch based MCMC sampler """
         while self._step_count < self._max_iteration and not self._is_converged():
             #print "step: " + str(self._step_count)
-            
+            """
             pr = cProfile.Profile()
             pr.enable()
+            """
             (mini_batch, scale) = self._network.sample_mini_batch(self._mini_batch_size, "stratified-random-node")
             latent_vars = {}
             size = {}
@@ -127,19 +128,19 @@ class MCMCSamplerStochastic(Learner):
                 ppx_score = self._cal_perplexity_held_out()
                 print str(ppx_score)
                 self._ppxs_held_out.append(ppx_score)
-                if ppx_score < 12.0:
+                if ppx_score < 5.0:
                     self.stepsize_switch = True
                     #print "switching to smaller step size mode!"
                     
             self._step_count += 1
-            
+            """
             pr.disable()
             s = StringIO.StringIO()
             sortby = 'cumulative'
             ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
             ps.print_stats()
             print s.getvalue()
-    
+            """
     def __update_pi1(self, mini_batch):
         
         grads = np.zeros((self._N, self._K))

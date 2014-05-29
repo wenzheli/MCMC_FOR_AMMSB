@@ -3,6 +3,8 @@ from com.uva.network import Network
 from com.uva.preprocess.data_factory import DataFactory
 from com.uva.learning.mcmc_sampler_stochastic import MCMCSamplerStochastic
 from com.uva.learning.variational_inference_stochastic import SVI
+from com.uva.learning.variational_inference_batch import SV
+from com.uva.learning.mcmc_sampler_batch import MCMCSamplerBatch
 import threading
 import matplotlib.pyplot as plt
 
@@ -33,7 +35,7 @@ def main():
     parser.add_argument('alpha', type=float, default=0.01)
     parser.add_argument('eta0', type=float, default=1)
     parser.add_argument('eta1', type=float, default=1)
-    parser.add_argument('K', type=int, default=100)  
+    parser.add_argument('K', type=int, default=300)  
     parser.add_argument('mini_batch_size', type=int, default=50)   # mini-batch size
     parser.add_argument('epsilon', type=float, default=0.05)
     parser.add_argument('max_iteration', type=int, default=10000000)
@@ -48,18 +50,18 @@ def main():
     parser.add_argument('output_dir', type=str,default='.')
     args = parser.parse_args()
     
-    data = DataFactory.get_data("hep_ph")
+    data = DataFactory.get_data("netscience")
     network = Network(data, 0.1)
     
-    """
+    print "start MCMC batch"
     ppx_mcmc = []
-    sampler = MCMCSamplerStochastic(args, network)
+    sampler = MCMCSamplerBatch(args, network)
     #work_mcmc(sampler, ppx_mcmc)
     sampler.run()
-    """
-    
+        
+    print "start variational inference batch"
     ppx_svi = []
-    sampler  = SVI(args, network)
+    sampler  = SV(args, network)
     #work_svi(sampler, ppx_svi)
     sampler.run()
     
