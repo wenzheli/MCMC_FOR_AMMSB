@@ -28,6 +28,7 @@ def sample_z_ab_from_edge(int y, np.ndarray[double, ndim=1] pi_a,
     for k in range(1,K):
         bounds[k] = bounds[k-1] + p[k]
     
+    location = random.random() * bounds[K-1]
     # get the index of bounds that containing location. 
     for i in range(0, K):
             if location <= bounds[i]:
