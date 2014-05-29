@@ -69,7 +69,7 @@ class SV(Learner):
                 if (a,b) in self._network.get_held_out_set() or (a,b) in self._network.get_test_set():
                     continue
                 
-                print str(a) + ", " + str(b)
+        
                 (phi_ab, phi_ba) = sample_latent_vars_for_each_pair(a, b, self.__gamma[a], self.__gamma[b],
                                                                 self.__lamda, self._K, self.__phi_update_threshold,
                                                                 self._epsilon, self.__online_iterations, 
