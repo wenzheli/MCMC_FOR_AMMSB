@@ -75,6 +75,9 @@ class SV(Learner):
                                                                 self._epsilon, self.__online_iterations, 
                                                                 self._network.get_linked_edges())
                 
+                print str(phi_ab)
+                print str(phi_ba)
+                
                 # update gamma_grad and lamda_grad
                 gamma_grad[a] += phi_ab
                 gamma_grad[b] += phi_ba

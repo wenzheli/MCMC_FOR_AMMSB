@@ -51,17 +51,19 @@ def main():
     args = parser.parse_args()
     
     data = DataFactory.get_data("netscience")
-    network = Network(data, 0.1)
+    network = Network(data, 0.01)
     
+    """
     print "start MCMC batch"
     ppx_mcmc = []
-    sampler = MCMCSamplerBatch(args, network)
+    sampler = MCMCSamplerStochastic(args, network)
     #work_mcmc(sampler, ppx_mcmc)
     sampler.run()
-        
+    """                                                                                                                                                                                         
     print "start variational inference batch"
     ppx_svi = []
-    sampler  = SV(args, network)
+    sampler  = MCMCSamplerStochastic(args, network)
+    
     #work_svi(sampler, ppx_svi)
     sampler.run()
     

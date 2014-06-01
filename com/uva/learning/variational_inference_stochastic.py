@@ -55,8 +55,8 @@ class SVI(Learner):
         Learner.__init__(self, args, graph)
         
         # variational parameters. 
-        self.__lamda = np.random.gamma(1,1,(self._K, 2))      # variational parameters for beta  
-        self.__gamma = np.random.gamma(1,1,(self._N, self._K)) # variational parameters for pi
+        self.__lamda = np.random.gamma(100,0.01,(self._K, 2))      # variational parameters for beta  
+        self.__gamma = np.random.gamma(100,0.01,(self._N, self._K)) # variational parameters for pi
         print str(self.__lamda)
         self.__update_pi_beta()
         # step size parameters. 
