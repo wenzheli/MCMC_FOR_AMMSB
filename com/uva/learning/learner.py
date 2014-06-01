@@ -86,7 +86,29 @@ class Learner(object):
             return False
         
         return True
-            
+    
+    def save_model(self):
+        f = open('pi.txt', 'wb')
+        for i in range(0, self._N):
+            f.write(str(i)+ ": " + str(self._pi[i]) +"\n")
+        f.close()
+        
+        f = open('communities.txt', 'wb')
+        commus = {}
+        for k in range(0, self._K):
+            commus[k] = []
+        
+        for i in range(0, self._N):
+            m = max(self._pi[i])
+            for j in range(0, self._K):
+                if self._pi[i][j] == m:
+                    commus[j].append(i)
+        for i in range(0, self._K):
+            f.write(str(commus[i]) + "\n")
+        f.close()
+        
+        
+    
     def __cal_perplexity(self, data):
         """
         calculate the perplexity for data.
@@ -117,14 +139,16 @@ class Learner(object):
                 non_link_likelihood += edge_likelihood
         
         # weight each part proportionally. 
-        #avg_likelihood = self._link_ratio*(link_likelihood/link_count) + \
-        #                   (1-self._link_ratio)*(non_link_likelihood/non_link_count) 
+        avg_likelihood1 = self._link_ratio*(link_likelihood/link_count) + \
+                           (1-self._link_ratio)*(non_link_likelihood/non_link_count) 
         
         # direct calculation. 
         avg_likelihood = (link_likelihood + non_link_likelihood)/(link_count+non_link_count)
+        print str(avg_likelihood) + " " + str(link_likelihood/link_count) + " " + str(link_count) + " " + \
+                  str(non_link_likelihood/non_link_count) + " " +str(non_link_count)+" " + str(avg_likelihood1)
         #print "perplexity score is: " + str(math.exp(-avg_likelihood))    
-        
-        return math.exp(-avg_likelihood)            
+        #print "link: " + str(link_likelihood) + "  non-link:" + str(non_link_likelihood)
+        return (-avg_likelihood)            
     
     
     def __cal_edge_likelihood(self, pi_a, pi_b, y, beta):
@@ -133,6 +157,22 @@ class Learner(object):
         in order to calculate this, we need to sum over all the possible (z_ab, z_ba)
         such that:  p(y|*) = \sum_{z_ab,z_ba}^{} p(y, z_ab,z_ba|pi_a, pi_b, beta)
         but this calculation can be done in O(K), by using some trick.  
+        """
+        s = 0.0
+        if y == 1:
+            for k in range(0, self._K):
+                s+= pi_a[k]*pi_b[k]*beta[k]
+        else:
+            sum = 0.0
+            for k in range(0, self._K):
+                s+= pi_a[k] * pi_b[k]*(1-beta[k])
+                sum += pi_a[k] * pi_b[k]
+            s += (1-sum)*(1-self._epsilon) 
+        
+        if s < 1e-30:
+            s = 1e-30
+        return math.log(s)
+        
         """
         prob = 0
         s = 0
@@ -150,5 +190,6 @@ class Learner(object):
         if prob < 0:
             print "adsfadsfadsf"
         return math.log(prob)
-    
+        """
+        
     

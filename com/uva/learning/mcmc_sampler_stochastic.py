@@ -48,13 +48,14 @@ class MCMCSamplerStochastic(Learner):
         # control parameters for learning
         self.__num_node_sample = int(math.sqrt(self._network.get_num_nodes())) 
         
+        #self.__num_node_sample = int(self._N/10)
         # model parameters and re-parameterization
         # since the model parameter - \pi and \beta should stay in the simplex, 
         # we need to restrict the sum of probability equals to 1.  The way we
         # restrict this is using re-reparameterization techniques, where we 
         # introduce another set of variables, and update them first followed by 
         # updating \pi and \beta.  
-        self.__theta = np.random.gamma(self._eta[0],self._eta[1],(self._K, 2))      # parameterization for \beta
+        self.__theta = np.random.gamma(1,1,(self._K, 2))      # parameterization for \beta
         self.__phi = np.random.gamma(1,1,(self._N, self._K))   # parameterization for \pi
         
         temp = self.__theta/np.sum(self.__theta,1)[:,np.newaxis]
@@ -69,13 +70,13 @@ class MCMCSamplerStochastic(Learner):
             """
             (mini_batch, scale) = self._network.sample_mini_batch(self._mini_batch_size, "stratified-random-node")
             #print "iteration: " + str(self._step_count)
-            """
+            
             if self._step_count % 1 == 0:
                 ppx_score = self._cal_perplexity_held_out()
-                print "perplexity for hold out set is: "  + str(ppx_score)
+                #print "perplexity for hold out set is: "  + str(ppx_score)
                 self._ppxs_held_out.append(ppx_score)
-            """             
-            self.__update_pi1(mini_batch)
+                         
+            self.__update_pi1(mini_batch, scale)
             
             # sample (z_ab, z_ba) for each edge in the mini_batch. 
             # z is map structure. i.e  z = {(1,10):3, (2,4):-1}
@@ -106,6 +107,7 @@ class MCMCSamplerStochastic(Learner):
             latent_vars = {}
             size = {}
             # iterate through each node in the mini batch. 
+            
             for node in self.__nodes_in_batch(mini_batch):
                 # sample a mini-batch of neighbors
                 neighbor_nodes = self.__sample_neighbor_nodes(self.__num_node_sample, node)                
@@ -117,6 +119,7 @@ class MCMCSamplerStochastic(Learner):
             # update pi for each node
             for node in self.__nodes_in_batch(mini_batch):
                 self.__update_pi_for_node(node, latent_vars[node], size[node])
+            
             
             # sample (z_ab, z_ba) for each edge in the mini_batch. 
             # z is map structure. i.e  z = {(1,10):3, (2,4):-1}
@@ -141,7 +144,7 @@ class MCMCSamplerStochastic(Learner):
             ps.print_stats()
             print s.getvalue()
             """
-    def __update_pi1(self, mini_batch):
+    def __update_pi1(self, mini_batch, scale):
         
         grads = np.zeros((self._N, self._K))
         counter = np.zeros(self._N)
@@ -171,15 +174,15 @@ class MCMCSamplerStochastic(Learner):
             eps_t  = self.__a*((1 + self._step_count/self.__b)**-self.__c)
 
         for i in range(0, self._N):
-            if counter[i] < 1:
-                continue
             noise = np.random.randn(self._K)  
             sum_phi_i = np.sum(self.__phi[i])
             for k in range(0, self._K):
-                
-                phi_star[i][k] = abs(self.__phi[i,k] + eps_t/2 * (self._alpha - self.__phi[i,k] + \
-                                self._N/counter[i] * (grads[i][k]-1/(sum_phi_i*counter[i])) \
-                                + eps_t**.5*self.__phi[i,k]**.5 * noise[k]))
+                if counter[i] < 1:
+                    phi_star[i][k] = abs((self.__phi[i,k]) + eps_t/2*(self._alpha - self.__phi[i,k])+eps_t**.5*self.__phi[i,k]**.5 * noise[k])
+                else:
+                    phi_star[i][k] = abs(self.__phi[i,k] + eps_t/2 * (self._alpha - self.__phi[i,k] + \
+                                scale * (grads[i][k]-(1/sum_phi_i)*counter[i])) \
+                                + eps_t**.5*self.__phi[i,k]**.5 * noise[k])
                 
                 if self._step_count < 50000:
                     self.__phi[i][k] = phi_star[i][k]
@@ -189,7 +192,6 @@ class MCMCSamplerStochastic(Learner):
                                                 
             sum_phi = np.sum(self.__phi[i])
             self._pi[i] = [self.__phi[i,k]/sum_phi for k in range(0, self._K)]
-            
             
         
         
@@ -233,8 +235,10 @@ class MCMCSamplerStochastic(Learner):
         #self.__theta = theta_star        
         # update beta from theta
         temp = self.__theta/np.sum(self.__theta,1)[:,np.newaxis]
+        
+        #print "old beta: " + str(self._beta)
         self._beta = temp[:,1]
-    
+        #print "new beta: " + str(self._beta)
     
     def __update_pi_for_node(self, i, z, n):
         '''

@@ -249,7 +249,7 @@ class Network(object):
             """ sample non-link edges """
             # this is approximation, since the size of self.train_link_map[nodeId]
             # greatly smaller than N. 
-            mini_batch_size = int((self.__N - len(self.__train_link_map[nodeId]))/self.__num_pieces)  
+            mini_batch_size = int(self.__N/self.__num_pieces)  
             p = mini_batch_size
             while p > 0:
                 # because of the sparsity, when we sample $mini_batch_size*2$ nodes, the list likely
