@@ -8,6 +8,7 @@ import cProfile, pstats, StringIO
 from scipy.special import psi
 from com.uva.learning.learner import Learner
 from com.uva.estimate_phi import sample_latent_vars_for_each_pair
+import time
 
 class SVI(Learner):
     '''
@@ -56,7 +57,7 @@ class SVI(Learner):
         
         # variational parameters. 
         self.__lamda = np.random.gamma(100,0.01,(self._K, 2))      # variational parameters for beta  
-        self.__gamma = np.random.gamma(100,0.01,(self._N, self._K)) # variational parameters for pi
+        self.__gamma = np.random.gamma(1,1,(self._N, self._K)) # variational parameters for pi
         print str(self.__lamda)
         self.__update_pi_beta()
         # step size parameters. 
@@ -64,9 +65,11 @@ class SVI(Learner):
         self.__tao = args.c
         
         # control parameters for learning 
-        self.__online_iterations = 200
+        self.__online_iterations = 50
         self.__phi_update_threshold = 0.0001
        
+        self._avg_log = []
+        self._timing = []
        
     def run(self):
         '''
@@ -83,23 +86,36 @@ class SVI(Learner):
                 new_value = (1-p_t)*old_value + p_t * new value. 
         '''
         
-        pr = cProfile.Profile()
-        pr.enable()
+        
         
         # running until convergence.
-        self._step_count += 1      
-            
+        start = time.time()
+        self._step_count += 1                
         while self._step_count < self._max_iteration and not self._is_converged(): 
             (mini_batch, scale) = self._network.sample_mini_batch(self._mini_batch_size, "stratified-random-node")
-            
+            """
+            pr = cProfile.Profile()
+            pr.enable()
+            """
              # evaluate model after processing every 10 mini-batches. 
-            if self._step_count % 1 ==  0:
-                self.save_model()
+            if self._step_count % 5 ==  0:
+                #self.save_model()
                 ppx_score = self._cal_perplexity_held_out()
                 #print "perplexity for hold out set is: "  + str(ppx_score)
                 self._ppxs_held_out.append(ppx_score)
-              
+                
+                if self._step_count > 5000:
+                    size = len(self._avg_log)
+                    ppx_score = (1-1.0/(self._step_count-50)) * self._avg_log[size-1] + 1.0/(self._step_count-50) * ppx_score
+                    self._avg_log.append(ppx_score)
+                else:
+                    self._avg_log.append(ppx_score)
+                
+                self._timing.append(time.time()-start)
             
+            if self._step_count % 50 == 0:
+                self._save()
+              
             # update (phi_ab, phi_ba) for each edge
             phi = {}               # mapping (a,b) => (phi_ab, phi_ba)
             self.__sample_latent_vars_for_edges(phi, mini_batch)
@@ -109,13 +125,15 @@ class SVI(Learner):
             #print "new beta:" + str(self._beta)
             
             self._step_count += 1
-        
-        pr.disable()
-        s = StringIO.StringIO()
-        sortby = 'cumulative'
-        ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
-        ps.print_stats()
-        print s.getvalue()    
+            """
+            pr.disable()
+            s = StringIO.StringIO()
+            sortby = 'cumulative'
+            ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+            ps.print_stats()
+            print s.getvalue() 
+            """
+           
     def __sample_latent_vars_for_edges(self, phi, mini_batch):
         
         for edge in mini_batch:
@@ -220,6 +238,17 @@ class SVI(Learner):
                 self.__lamda[k][0] = (1-p_t)*self.__lamda[k][0] + p_t *(self._eta[0] + scale * grad_lamda[k][0])
                 self.__lamda[k][1] = (1-p_t)*self.__lamda[k][1] + p_t *(self._eta[1] + scale * grad_lamda[k][1])
             
+    
+    
+    def _save(self):
+        f = open('ppx_variational_sampler.txt', 'wb')
+        for i in range(0, len(self._avg_log)):
+            f.write(str(math.exp(self._avg_log[i])) + "\t" + str(self._timing[i]) +"\n")
+        f.close()
+        
+    
+    
+    
     def __estimate_phi_for_edge(self, edge, phi):
         '''
         calculate (phi_ab, phi_ba) for given edge : (a,b) 

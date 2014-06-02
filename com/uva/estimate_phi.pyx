@@ -70,7 +70,7 @@ def sample_latent_vars_for_each_pair(int a, int b,
                 phi_ba[k] = math.exp(psi(gamma_b[k])+phi_ab[k]*\
                                         (psi(lamda[k][0])-psi(lamda[k][0]+lamda[k][1]))+u)
             else:
-                u=0;
+                u=0
                 #u = -phi_ab[k]* math.log(1-epsilon)
                 phi_ba[k] = math.exp(psi(gamma_b[k])+phi_ab[k]*\
                                         (psi(lamda[k][1])-psi(lamda[k][0]+lamda[k][1]))+u)   

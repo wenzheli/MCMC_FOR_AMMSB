@@ -5,8 +5,8 @@ from com.uva.learning.mcmc_sampler_stochastic import MCMCSamplerStochastic
 from com.uva.learning.variational_inference_stochastic import SVI
 from com.uva.learning.variational_inference_batch import SV
 from com.uva.learning.mcmc_sampler_batch import MCMCSamplerBatch
+from com.uva.learning.gibbs_sampler import GibbsSampler
 import threading
-import matplotlib.pyplot as plt
 
 def work_mcmc (sampler, ppxs): 
     threading.Timer(2, work_mcmc, [sampler, ppxs]).start (); 
@@ -50,17 +50,9 @@ def main():
     parser.add_argument('output_dir', type=str,default='.')
     args = parser.parse_args()
     
-    data = DataFactory.get_data("netscience")
+    data = DataFactory.get_data("testdata")
     network = Network(data, 0.01)
     
-    """
-    print "start MCMC batch"
-    ppx_mcmc = []
-    sampler = MCMCSamplerStochastic(args, network)
-    #work_mcmc(sampler, ppx_mcmc)
-    sampler.run()
-    """                                                                                                                                                                                         
-    print "start variational inference batch"
     ppx_svi = []
     sampler  = MCMCSamplerStochastic(args, network)
     

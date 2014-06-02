@@ -24,14 +24,13 @@ def sample_z_ab_from_edge(int y, np.ndarray[double, ndim=1] pi_a,
         p[i] = tmp
     
     
-    bounds[0] = p[0]
     for k in range(1,K):
-        bounds[k] = bounds[k-1] + p[k]
+        p[k] += p[k-1]
     
-    location = random.random() * bounds[K-1]
+    location = random.random() * p[K-1]
     # get the index of bounds that containing location. 
     for i in range(0, K):
-            if location <= bounds[i]:
+            if location <= p[i]:
                 return i
     
     # failed, should not happen!
