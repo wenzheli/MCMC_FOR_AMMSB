@@ -55,7 +55,7 @@ class SVI(Learner):
         Learner.__init__(self, args, graph)
         
         # variational parameters. 
-        self.__lamda = np.random.gamma(self._eta[0],self._eta[1],(self._K, 2))      # variational parameters for beta  
+        self.__lamda = np.random.gamma(100,0.01,(self._K, 2))      # variational parameters for beta  
         self.__gamma = np.random.gamma(1,1,(self._N, self._K)) # variational parameters for pi
         self.__update_pi_beta()
         # step size parameters. 
@@ -134,7 +134,7 @@ class SVI(Learner):
         
         self._pi = self.__gamma/np.sum(self.__gamma,1)[:,np.newaxis]
         temp = self.__lamda/np.sum(self.__lamda,1)[:,np.newaxis]
-        self._beta = temp[:,1]
+        self._beta = temp[:,0]
 
             
     def __update_gamma_and_lamda(self, phi, mini_batch, scale):
@@ -184,7 +184,15 @@ class SVI(Learner):
             p_t = (1024 + self._step_count)**(-0.5)
         else:
             p_t = 0.01*(1+self._step_count/1024.0)**(-0.55)
+        
+        
+        for node in range(0, self._N):
             
+            if node in grad_gamma.keys():
+                self.__gamma[node]=(1-p_t)*self.__gamma[node] + p_t * (self._alpha + scale * grad_gamma[node])
+            else:
+                self.__gamma[node]=(1-p_t)*self.__gamma[node] + p_t * self._alpha
+        """    
         for node in grad_gamma.keys():
             gamma_star = np.zeros(self._K)
             scale1 = 1.0
@@ -196,11 +204,11 @@ class SVI(Learner):
                 self.__gamma[node] = (1-1.0/(self._step_count))*self.__gamma[node] + 1.0/(self._step_count)*gamma_star
             else:
                 self.__gamma[node]=(1-p_t)*self.__gamma[node] + p_t * (self._alpha + scale1 * grad_gamma[node])
-        
+        """
         # update lamda
         for k in range(self._K):
             
-            if self._step_count > 400:
+            if self._step_count > 4000:
                 lamda_star_0 = (1-p_t)*self.__lamda[k][0] + p_t *(self._eta[0] + scale * grad_lamda[k][0])
                 lamda_star_1 = (1-p_t)*self.__lamda[k][1] + p_t *(self._eta[1] + scale * grad_lamda[k][1])
                 self.__lamda[k][0] = (1-1/(self._step_count)) * self.__lamda[k][0] +1/(self._step_count)*lamda_star_0
