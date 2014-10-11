@@ -5,6 +5,7 @@ from com.uva.preprocess.astro_ph import AstroPh
 from com.uva.preprocess.condmat import CondMat
 from com.uva.preprocess.hep_th import HepTh
 from com.uva.preprocess.testdata import TestData
+from com.uva.preprocess.us_air import USAir
 
 class DataFactory(object):
     """
@@ -31,6 +32,8 @@ class DataFactory(object):
             dataObj = HepTh()
         elif dataset_name == "testdata":
             dataObj = TestData()
+        elif dataset_name == "us_air":
+            dataObj = USAir()
         else:
             pass
         

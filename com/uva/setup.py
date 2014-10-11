@@ -3,5 +3,5 @@ from Cython.Build import cythonize
 from distutils.extension import Extension
 
 setup(
-    ext_modules = cythonize("estimate_phi.pyx")
+    ext_modules = cythonize("core_utils.pyx")
 )

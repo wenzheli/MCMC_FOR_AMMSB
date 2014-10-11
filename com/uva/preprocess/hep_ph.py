@@ -25,7 +25,7 @@ class HepPH(DataSet):
         However, the node ID is not increasing by 1 every time. Thus, we re-format
         the node ID first. 
         """
-        
+        n_max = 1000
         # TODO: try catch block.  
         f= open("/home/liwenzhe/workspace/SGRLDForMMSB/datasets/CA-HepPh.txt", 'r')
         lines = f.readlines()
@@ -55,8 +55,12 @@ class HepPH(DataSet):
             strs[1] = int(strs[1])
             node1 = node_id_map[strs[0]]
             node2 = node_id_map[strs[1]]
+            if node1 >= n_max or node2 >= n_max:
+                continue;
+            
             if node1 == node2:
                 continue
+            
             if node1 == 2140 and node2 == 4368:
                 print "same"
             E.add((min(node1,node2), max(node1,node2)))

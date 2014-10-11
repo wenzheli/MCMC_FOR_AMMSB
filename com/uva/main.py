@@ -50,14 +50,27 @@ def main():
     parser.add_argument('output_dir', type=str,default='.')
     args = parser.parse_args()
     
-    data = DataFactory.get_data("testdata")
+    data = DataFactory.get_data("hep_ph")
+    
     network = Network(data, 0.01)
     
-    ppx_svi = []
-    sampler  = MCMCSamplerStochastic(args, network)
     
-    #work_svi(sampler, ppx_svi)
+    print len(data.E)
+    
+    #sampler = SVI(args, network)
+    #sampler.run()
+    #sampler= GibbsSampler(args, network)
+    #sampler.run()
+    sampler = MCMCSamplerStochastic(args, network)
     sampler.run()
+    
+    # Collapsed Gibbs sampler
+
+    # Stochastic MCMC
+    
+ 
+
+    
     
 if __name__ == '__main__':
     main()

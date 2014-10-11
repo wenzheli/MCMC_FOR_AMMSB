@@ -65,7 +65,7 @@ class SVI(Learner):
         self.__tao = args.c
         
         # control parameters for learning 
-        self.__online_iterations = 50
+        self.__online_iterations = 100
         self.__phi_update_threshold = 0.0001
        
         self._avg_log = []
@@ -85,12 +85,11 @@ class SVI(Learner):
             update (gamma, lamda) using gradient:
                 new_value = (1-p_t)*old_value + p_t * new value. 
         '''
-        
-        
-        
+          
         # running until convergence.
         start = time.time()
-        self._step_count += 1                
+        self._step_count =0
+        self._max_iteration = 30000                
         while self._step_count < self._max_iteration and not self._is_converged(): 
             (mini_batch, scale) = self._network.sample_mini_batch(self._mini_batch_size, "stratified-random-node")
             """
@@ -98,22 +97,22 @@ class SVI(Learner):
             pr.enable()
             """
              # evaluate model after processing every 10 mini-batches. 
-            if self._step_count % 5 ==  0:
+            if self._step_count % 10 ==  0:
                 #self.save_model()
                 ppx_score = self._cal_perplexity_held_out()
                 #print "perplexity for hold out set is: "  + str(ppx_score)
                 self._ppxs_held_out.append(ppx_score)
                 
-                if self._step_count > 5000:
+                if self._step_count > 450000:
                     size = len(self._avg_log)
-                    ppx_score = (1-1.0/(self._step_count-50)) * self._avg_log[size-1] + 1.0/(self._step_count-50) * ppx_score
+                    ppx_score = (1-1.0/(self._step_count-0)) * self._avg_log[size-1] + 1.0/(self._step_count-45000) * ppx_score
                     self._avg_log.append(ppx_score)
                 else:
                     self._avg_log.append(ppx_score)
                 
                 self._timing.append(time.time()-start)
             
-            if self._step_count % 50 == 0:
+            if self._step_count % 1000 == 0:
                 self._save()
               
             # update (phi_ab, phi_ba) for each edge
@@ -135,7 +134,6 @@ class SVI(Learner):
             """
            
     def __sample_latent_vars_for_edges(self, phi, mini_batch):
-        
         for edge in mini_batch:
             a = edge[0]
             b = edge[1]
@@ -210,7 +208,7 @@ class SVI(Learner):
         
         for node in range(0, self._N):
             if node in grad_gamma.keys():
-                self.__gamma[node]=(1-p_t)*self.__gamma[node] + p_t * (self._alpha + scale * grad_gamma[node])
+                self.__gamma[node]=(1-p_t)*self.__gamma[node] + p_t * (self._alpha + ((self._N/counter[node])) * grad_gamma[node])
             else:  
                 self.__gamma[node]=(1-p_t)*self.__gamma[node] + p_t * self._alpha
         """        

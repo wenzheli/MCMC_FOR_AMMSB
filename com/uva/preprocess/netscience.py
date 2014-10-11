@@ -10,6 +10,9 @@ class NetScience(DataSet):
         pass
               
     def _process(self):
+        
+        max_n = 500
+        
         """
         The netscience data is stored in xml format. The function just reads all the vertices
         and edges.
@@ -25,12 +28,26 @@ class NetScience(DataSet):
             attrs = node.attrib
             V[attrs['id']] = attrs['title']
             
-        N = len(V)   
+        N = min(len(V), max_n)   
+        
         # iterate every link in the graph, and store those links into Set<Edge> object. 
         E = Set()
         for link in tree.iter("link"):
             attrs = link.attrib
+            if int(attrs['target']) >= N or int(attrs['source'])>=N:
+                   continue
             E.add((int(attrs['target']), int(attrs['source'])))
             
         return Data(V, E, N)
+    
+             
+# file path of netscience data set. 
+tree = ET.parse("/home/liwenzhe/workspace/SGRLDForMMSB/datasets/netscience.xml")
+        
+f = open('netscience.txt', 'wb')      
+ # iterate every link in the graph, and store those links into Set<Edge> object. 
+for link in tree.iter("link"):
+    attrs = link.attrib
+    f.write(attrs['target']+"\t"+attrs['source']+"\n")
+f.close()
     

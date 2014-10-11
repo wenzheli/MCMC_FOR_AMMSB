@@ -25,7 +25,7 @@ class Relativity(DataSet):
         However, the node ID is not increasing by 1 every time. Thus, we re-format
         the node ID first. 
         """
-        
+        n_max = 1000
         # TODO: try catch block.  
         f= open("/home/liwenzhe/workspace/SGRLDForMMSB/datasets/CA-GrQc.txt", 'r')
         lines = f.readlines()
@@ -39,7 +39,7 @@ class Relativity(DataSet):
             nodes.add(int(strs[1]))
         nodelist = list(nodes)
         nodelist.sort()
-        N = len(nodelist)
+        N = min(n_max,len(nodelist))
         
         # change the node ID to make it start from 0
         node_id_map = {}
@@ -55,6 +55,8 @@ class Relativity(DataSet):
             strs[1] = int(strs[1])
             node1 = node_id_map[strs[0]]
             node2 = node_id_map[strs[1]]
+            if node1 >= N or node2 >= N:
+                continue
             if node1 == node2:
                 continue
 

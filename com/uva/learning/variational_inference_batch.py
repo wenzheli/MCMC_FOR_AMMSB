@@ -40,7 +40,7 @@ class SV(Learner):
         
         # running until convergence.
         self._step_count += 1      
-            
+        self._max_iteration = 200;
         while self._step_count < self._max_iteration and not self._is_converged(): 
                 
             ppx_score = self._cal_perplexity_held_out()

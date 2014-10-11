@@ -33,10 +33,14 @@ def sample_latent_vars_for_each_pair(int a, int b,
         
       
     # initialize 
+    cdef int i,k
+    cdef double sum_phi_ab, sum_phi_ba
     cdef np.ndarray[double, ndim=1] phi_ab = np.empty(K)
     cdef np.ndarray[double, ndim=1] phi_ba = np.empty(K)
     phi_ab.fill(1.0/K)
     phi_ba.fill(1.0/K)
+    
+    cdef double diff1, diff2
     
     cdef double u = 0.0 
     cdef int y = 0
